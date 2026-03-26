@@ -36,6 +36,14 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
 
   const loadParallelInfo = async (parallel: SubjectResult, force = false) => {
     const key = `${parallel.codigomateria}-${parallel.paralelo}-${parallel.tipocurso}`
+    // Si el curso está marcado como detenido (por un 404 previo), NO hacer nada
+    const stopParallel = state.stoppedSubjects[parallel.codigomateria]
+    if (stopParallel !== undefined) {
+      const rBase = parallel.paralelo % 100
+      const stopBase = stopParallel % 100
+      if (rBase > stopBase || (rBase === stopBase && parallel.paralelo >= stopParallel)) return
+    }
+
     const existing = state.parallelDetails[key]
 
     // Si ya se está cargando (y no es un reintento forzado), NO hacer nada
@@ -63,12 +71,24 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
       const [infoRes, scheduleRes, examsRes] = await Promise.allSettled([
         api.getCourseInfo(parallel.codigomateria, parallel.paralelo),
         api.getSubjectSchedule(parallel.codigomateria, parallel.paralelo),
-        api.getExamSchedule(parallel.codigomateria, parallel.paralelo),
+        parallel.tipoparalelo === 'TEORICO' 
+          ? api.getExamSchedule(parallel.codigomateria, parallel.paralelo)
+          : Promise.resolve([])
       ])
 
       const info = infoRes.status === 'fulfilled' ? (infoRes.value[0] as CourseInfo) ?? null : (existing?.info || null)
       const scheduleData = scheduleRes.status === 'fulfilled' ? scheduleRes.value : (existing?.schedule || [])
       const examsData = examsRes.status === 'fulfilled' ? examsRes.value : (existing?.exams || [])
+
+      // Detect if this parallel is inactive (404)
+      const isInactive = [infoRes, scheduleRes].some(
+        res => res.status === 'rejected' && (res.reason as Error)?.message?.includes('404')
+      )
+
+      if (isInactive) {
+        dispatch({ type: 'SET_STOPPED_SUBJECT', payload: { code: parallel.codigomateria, paralelo: parallel.paralelo } })
+        return
+      }
 
       dispatch({
         type: 'SET_PARALLEL_DETAIL',

@@ -96,6 +96,7 @@ export interface SchedulerState {
   loadingAvailable: boolean
   errorSearch: string | null
   studentInfo: StudentInfo | null
+  stoppedSubjects: Record<string, number>
 }
 
 export interface StudentInfo {
@@ -126,6 +127,7 @@ export type SchedulerAction =
   | { type: 'SET_ERROR_SEARCH'; payload: string | null }
   | { type: 'SET_PARALLEL_DETAIL'; payload: { key: string; detail: ParallelDetail } }
   | { type: 'SET_STUDENT_INFO'; payload: StudentInfo | null }
+  | { type: 'SET_STOPPED_SUBJECT'; payload: { code: string; paralelo: number } }
   | { type: 'ADD_PARALLEL'; payload: SelectedParallel }
   | { type: 'REMOVE_PARALLEL'; payload: string }
   | { type: 'CLEAR_ALL' }

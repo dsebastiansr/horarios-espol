@@ -41,44 +41,75 @@ export function SearchBar() {
       // 3. Fetch details (Info, Schedule, Exams) in BACKGROUND
       // Using a separate async IIFE or just not awaiting the Promise.all for the whole block
       const fetchDetails = async () => {
-        // Process in small batches to avoid overwhelming the browser/backend
-        const batchSize = 5
-        for (let i = 0; i < allParallels.length; i += batchSize) {
-          const batch = allParallels.slice(i, i + batchSize)
+        // Group parallels by subject to allow early exit
+        const grouped = allParallels.reduce((acc, p) => {
+          const code = p.codigomateria
+          if (!acc[code]) acc[code] = []
+          acc[code].push(p)
+          return acc
+        }, {} as Record<string, typeof allParallels>)
+
+        const subjectCodes = Object.keys(grouped)
+        const batchSize = 3 // Number of subjects to process in parallel
+
+        for (let i = 0; i < subjectCodes.length; i += batchSize) {
+          const batch = subjectCodes.slice(i, i + batchSize)
           await Promise.all(
-            batch.map(async (p) => {
-              const key = `${p.codigomateria}-${p.paralelo}-${p.tipocurso}`
-              try {
-                const [infoRes, scheduleRes, examsRes] = await Promise.allSettled([
-                  api.getCourseInfo(p.codigomateria, p.paralelo),
-                  api.getSubjectSchedule(p.codigomateria, p.paralelo),
-                  api.getExamSchedule(p.codigomateria, p.paralelo)
-                ])
+            batch.map(async (code) => {
+              const parallels = grouped[code].sort((a, b) => {
+                const baseA = a.paralelo % 100
+                const baseB = b.paralelo % 100
+                if (baseA !== baseB) return baseA - baseB
+                return a.paralelo - b.paralelo
+              })
+              for (const p of parallels) {
+                const key = `${p.codigomateria}-${p.paralelo}-${p.tipocurso}`
+                try {
+                  const [infoRes, scheduleRes, examsRes] = await Promise.allSettled([
+                    api.getCourseInfo(p.codigomateria, p.paralelo),
+                    api.getSubjectSchedule(p.codigomateria, p.paralelo),
+                    p.tipoparalelo === 'TEORICO' 
+                      ? api.getExamSchedule(p.codigomateria, p.paralelo) 
+                      : Promise.resolve([])
+                  ])
 
-                const info = infoRes.status === 'fulfilled' ? infoRes.value[0] || null : null
-                const schedule = scheduleRes.status === 'fulfilled' ? scheduleRes.value : []
-                const exams = examsRes.status === 'fulfilled' ? examsRes.value : []
+                  // Detect if this parallel is inactive (404)
+                  // Note: infoRes and scheduleRes are required, examsRes might be skipped
+                  const isInactive = [infoRes, scheduleRes].some(
+                    res => res.status === 'rejected' && (res.reason as Error)?.message?.includes('404')
+                  )
 
-                dispatch({
-                  type: 'SET_PARALLEL_DETAIL',
-                  payload: {
-                    key,
-                    detail: {
-                      subjectCode: p.codigomateria,
-                      subjectName: p.nombre,
-                      paralelo: p.paralelo,
-                      tipocurso: p.tipocurso as 'P' | 'G',
-                      tipoparalelo: p.tipoparalelo,
-                      info,
-                      schedule,
-                      exams,
-                      loading: false,
-                      error: null
-                    }
+                  if (isInactive) {
+                    console.log(`Stopping fetch for ${code} at parallel ${p.paralelo} due to 404`)
+                    dispatch({ type: 'SET_STOPPED_SUBJECT', payload: { code, paralelo: p.paralelo } })
+                    break // Stop fetching more parallels for this subject
                   }
-                })
-              } catch (err) {
-                console.error(`Error fetching details for ${key}`, err)
+
+                  const info = infoRes.status === 'fulfilled' ? infoRes.value[0] || null : null
+                  const schedule = scheduleRes.status === 'fulfilled' ? scheduleRes.value : []
+                  const exams = examsRes.status === 'fulfilled' ? examsRes.value : []
+
+                  dispatch({
+                    type: 'SET_PARALLEL_DETAIL',
+                    payload: {
+                      key,
+                      detail: {
+                        subjectCode: p.codigomateria,
+                        subjectName: p.nombre,
+                        paralelo: p.paralelo,
+                        tipocurso: p.tipocurso as 'P' | 'G',
+                        tipoparalelo: p.tipoparalelo,
+                        info,
+                        schedule,
+                        exams,
+                        loading: false,
+                        error: null
+                      }
+                    }
+                  })
+                } catch (err) {
+                  console.error(`Error fetching details for ${key}`, err)
+                }
               }
             })
           )
