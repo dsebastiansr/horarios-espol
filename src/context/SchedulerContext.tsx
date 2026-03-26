@@ -13,13 +13,23 @@ const initialState: SchedulerState = {
   loadingAvailable: false,
   errorSearch: null,
   studentInfo: null,
+  stoppedSubjects: {},
 }
 
 // --- Reducer ---
 function schedulerReducer(state: SchedulerState, action: SchedulerAction): SchedulerState {
   switch (action.type) {
     case 'SET_SEARCH_RESULTS':
-      return { ...state, searchResults: action.payload }
+      const filtered = action.payload.filter(r => {
+        const stopParallel = state.stoppedSubjects[r.codigomateria]
+        if (stopParallel === undefined) return true
+        const rBase = r.paralelo % 100
+        const stopBase = stopParallel % 100
+        if (rBase < stopBase) return true
+        if (rBase > stopBase) return false
+        return r.paralelo < stopParallel
+      })
+      return { ...state, searchResults: filtered }
     case 'SET_AVAILABLE_SUBJECTS':
       return { ...state, availableSubjects: action.payload }
     case 'SET_SEARCH_QUERY':
@@ -42,6 +52,20 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
       }
     case 'SET_STUDENT_INFO':
       return { ...state, studentInfo: action.payload }
+    case 'SET_STOPPED_SUBJECT':
+      const { code, paralelo: stopP } = action.payload
+      return {
+        ...state,
+        stoppedSubjects: { ...state.stoppedSubjects, [code]: stopP },
+        searchResults: state.searchResults.filter(r => {
+          if (r.codigomateria !== code) return true
+          const rBase = r.paralelo % 100
+          const stopBase = stopP % 100
+          if (rBase < stopBase) return true
+          if (rBase > stopBase) return false
+          return r.paralelo < stopP
+        })
+      }
     case 'ADD_PARALLEL': {
       const exists = state.selectedParallels.some(p => p.id === action.payload.id)
       if (exists) return state
