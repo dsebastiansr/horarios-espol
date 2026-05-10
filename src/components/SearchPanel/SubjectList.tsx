@@ -14,6 +14,8 @@ interface SubjectGroup {
   units: ParallelUnit[] // Replaces flat parallels
 }
 
+type SubjectTypeTab = 'all' | 'general' | 'professional' | 'complementary'
+
 function groupSubjectParallels(parallels: SubjectResult[]): ParallelUnit[] {
   const teoricos = parallels.filter(p => p.tipoparalelo === 'TEORICO')
   const practicos = parallels.filter(p => p.tipoparalelo === 'PRACTICO')
@@ -55,10 +57,33 @@ function groupSubjectParallels(parallels: SubjectResult[]): ParallelUnit[] {
 export function SubjectList() {
   const { state, dispatch } = useScheduler()
   const [filterText, setFilterText] = useState('')
+  const [activeTab, setActiveTab] = useState<SubjectTypeTab>('all')
+
+  const normalizedCreditType = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase()
+
+  const availableSubjectsForTab = useMemo(() => {
+    if (activeTab === 'all') return state.availableSubjects
+
+    const tabRules: Record<Exclude<SubjectTypeTab, 'all'>, string> = {
+      general: 'EDUCACION GENERAL',
+      professional: 'FORMACION PROFESIONAL',
+      complementary: 'FORMACION COMPLEMENTARIA',
+    }
+
+    return state.availableSubjects.filter(
+      (subject) => normalizedCreditType(subject.tipocredito) === tabRules[activeTab]
+    )
+  }, [activeTab, state.availableSubjects])
+
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const groups = useMemo<SubjectGroup[]>(() => {
     if (state.searchMode === 'available') {
-      return state.availableSubjects.map(s => {
+      return availableSubjectsForTab.map(s => {
         const code = s.cod_materia_acad.trim().toUpperCase()
         const parallels = state.searchResults.filter(r => r.codigomateria.trim().toUpperCase() === code)
 
@@ -102,7 +127,7 @@ export function SubjectList() {
         units: groupSubjectParallels(group.parallels),
       }
     })
-  }, [state.searchResults, state.availableSubjects, state.searchMode])
+  }, [state.searchResults, availableSubjectsForTab, state.searchMode])
 
   const filteredGroups = useMemo(() => {
     if (!filterText.trim()) return groups
@@ -163,19 +188,44 @@ export function SubjectList() {
 
   // Vista 1: Mostrando lista de materias (available) o resultados múltiples de búsqueda
   if (state.searchMode === 'available' || (state.searchMode === 'search' && Boolean(state.searchQuery) && groups.length > 1)) {
+    const tabs = [
+      { key: 'all' as const, label: 'Todas' },
+      { key: 'general' as const, label: 'Educación General' },
+      { key: 'professional' as const, label: 'Formación Profesional' },
+      { key: 'complementary' as const, label: 'Formación Complementaria' },
+    ]
+
     return (
       <div className="flex flex-col h-full overflow-hidden">
         {renderBreadcrumb()}
         <div className="space-y-4 overflow-y-auto flex-1 pr-2 pb-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700">
-          <div className="flex flex-col gap-2 ml-1">
-            {/* <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Materias Disponibles</p> */}
-            <input
-              type="text"
-              placeholder="Buscar por nombre o código"
-              value={filterText}
-              onChange={e => setFilterText(e.target.value)}
-              className="bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-all"
-            />
+          <input
+            type="text"
+            placeholder="Buscar por nombre o código"
+            value={filterText}
+            onChange={e => setFilterText(e.target.value)}
+            className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-all"
+          />
+
+          <div className="flex flex-col gap-2">
+            {state.searchMode === 'available' && (
+              <div className="flex flex-wrap gap-1 p-1">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`cursor-pointer shrink-0 text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-lg transition-all ${
+                      activeTab === tab.key
+                        ? 'bg-blue-600 text-blue-50'
+                        : 'bg-zinc-800/40 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {filteredGroups.map((group) => (
             <SubjectItem key={group.code} group={group} />
