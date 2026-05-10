@@ -3,7 +3,7 @@ import {
   useScheduler,
   useSelectedParallels,
 } from '../../context/SchedulerContext';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '../../utils/cn';
 
 export function SelectedSubjects() {
   const selected = useSelectedParallels();
@@ -51,12 +51,12 @@ export function SelectedSubjects() {
                 {parallels.map((p) => (
                   <div
                     key={p.id}
-                    className={twMerge(
-                      'flex text-[11px] font-bold items-center gap-2 h-fit px-2.5 py-1 rounded-full',
+                    className={cn(
+                      'flex text-[11px] font-bold items-center gap-2 h-fit px-2.5 py-1 rounded-full border',
 
                       p.tipoparalelo === 'TEORICO'
-                      ? 'bg-blue-600'
-                      : 'bg-emerald-600'
+                      ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                     )}
                   >
                     <span>{p.paralelo}</span>

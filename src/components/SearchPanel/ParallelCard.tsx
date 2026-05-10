@@ -188,7 +188,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
       const newPDetail = state.parallelDetails[newPKey]
       // Only add if we have the info ready (usually prefetched)
       if (newPDetail && !newPDetail.loading && newPDetail.info) {
-        const color = getSubjectColor(subjectIndex)
+        const color = getSubjectColor(newPDetail.subjectCode)
         dispatch({
           type: 'ADD_PARALLEL',
           payload: {
@@ -233,7 +233,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
 
   const handleAdd = () => {
     if (!isReady || isSelected || hasConflict) return
-    const color = getSubjectColor(subjectIndex)
+    const color = getSubjectColor(subjectCode ?? subjectIndex)
 
     if (t && tDetail?.info) {
       dispatch({

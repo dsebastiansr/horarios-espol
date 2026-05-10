@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useSelectedParallels } from '../../context/SchedulerContext'
-import { DAYS, DAY_MAP, GRID_START, GRID_END, SLOT_SECONDS, secondsToTime } from '../../utils/conflicts'
+import { DAYS, DAY_MAP, GRID_START, GRID_END, SLOT_SECONDS, secondsToTime, SUBJECT_COLORS } from '../../utils/conflicts'
 import type { SelectedParallel } from '../../types'
 import { LinearScheduleGrid } from './LinearScheduleGrid'
 
@@ -15,7 +15,21 @@ interface GridBlock {
 
 export function WeekGrid() {
   const selected = useSelectedParallels()
-  const totalSlots = Math.ceil((GRID_END - GRID_START) / SLOT_SECONDS)
+  const scheduleRange = useMemo(() => {
+    const allSlots = selected.flatMap((parallel) => parallel.schedule)
+    if (allSlots.length === 0) {
+      return { dynamicStart: GRID_START, dynamicEnd: GRID_END }
+    }
+
+    const minStart = Math.min(...allSlots.map((slot) => slot.horainicio))
+    const maxEnd = Math.max(...allSlots.map((slot) => slot.horafin))
+    const dynamicStart = Math.floor(minStart / SLOT_SECONDS) * SLOT_SECONDS
+    const dynamicEnd = Math.ceil(maxEnd / SLOT_SECONDS) * SLOT_SECONDS
+
+    return { dynamicStart, dynamicEnd }
+  }, [selected])
+
+  const totalSlots = Math.ceil((scheduleRange.dynamicEnd - scheduleRange.dynamicStart) / SLOT_SECONDS)
 
   const blocks = useMemo<GridBlock[]>(() => {
     const result: GridBlock[] = []
@@ -23,8 +37,8 @@ export function WeekGrid() {
       for (const slot of p.schedule) {
         const dayIndex = DAY_MAP[slot.nombredia.toUpperCase()]
         if (dayIndex === undefined) continue
-        const startSlot = Math.max(0, Math.floor((slot.horainicio - GRID_START) / SLOT_SECONDS))
-        const endSlot = Math.min(totalSlots, Math.ceil((slot.horafin - GRID_START) / SLOT_SECONDS))
+        const startSlot = Math.max(0, Math.floor((slot.horainicio - scheduleRange.dynamicStart) / SLOT_SECONDS))
+        const endSlot = Math.min(totalSlots, Math.ceil((slot.horafin - scheduleRange.dynamicStart) / SLOT_SECONDS))
         result.push({
           parallel: p,
           day: dayIndex,
@@ -36,7 +50,7 @@ export function WeekGrid() {
       }
     }
     return result
-  }, [selected, totalSlots])
+  }, [scheduleRange.dynamicStart, selected, totalSlots])
 
   if (selected.length === 0) {
     return (
@@ -50,6 +64,14 @@ export function WeekGrid() {
     )
   }
 
+  const subjectColorMap = new Map<string, string>()
+  selected.forEach((parallel) => {
+    if (!subjectColorMap.has(parallel.subjectCode)) {
+      const nextIndex = subjectColorMap.size % SUBJECT_COLORS.length
+      subjectColorMap.set(parallel.subjectCode, SUBJECT_COLORS[nextIndex])
+    }
+  })
+
   const items = blocks.map((b, i) => {
     const isPractico = b.parallel.tipoparalelo === 'PRACTICO'
     return {
@@ -57,14 +79,16 @@ export function WeekGrid() {
       day: b.day,
       startSlot: b.startSlot,
       endSlot: b.endSlot,
-      color: b.parallel.color,
+      color: subjectColorMap.get(b.parallel.subjectCode) ?? SUBJECT_COLORS[0],
       title: b.parallel.subjectName,
-      subtitle: b.parallel.tipoparalelo === 'PRACTICO' ? 'Práctico' : 'Teórico',
-      detail: [b.bloque, b.aula].filter(Boolean).join(' • '),
+      badges: [
+        b.bloque ? { label: b.bloque, kind: 'block' as const } : null,
+        b.aula ? { label: b.aula, kind: 'room' as const } : null,
+      ].filter(Boolean),
       rightTag: `P${b.parallel.paralelo}`,
       rightTagClassName: isPractico
-        ? 'bg-green-500/20 text-green-300'
-        : 'bg-blue-500/20 text-blue-300',
+        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
     }
   })
 
@@ -73,11 +97,11 @@ export function WeekGrid() {
       days={DAYS.map((day) => ({ key: day, label: day.slice(0, 3) }))}
       totalSlots={totalSlots}
       slotSeconds={SLOT_SECONDS}
-      gridStart={GRID_START}
+      gridStart={scheduleRange.dynamicStart}
       items={items}
       minWidthClassName="min-w-[780px]"
       emptyTitle="No hay clases en el horario"
-      emptySubtitle={`Rango visible ${secondsToTime(GRID_START)} - ${secondsToTime(GRID_END)}`}
+      emptySubtitle={`Rango visible ${secondsToTime(scheduleRange.dynamicStart)} - ${secondsToTime(scheduleRange.dynamicEnd)}`}
     />
   )
 }

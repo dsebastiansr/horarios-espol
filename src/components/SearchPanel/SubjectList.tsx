@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useScheduler } from '../../context/SchedulerContext'
 import { ParallelCard } from './ParallelCard'
 import type { SubjectResult } from '../../types'
+import { cn } from '../../utils/cn'
 
 export interface ParallelUnit {
   teorico: SubjectResult | null
@@ -196,9 +197,9 @@ export function SubjectList() {
     ]
 
     return (
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col h-full min-h-0 overflow-hidden">
         {renderBreadcrumb()}
-        <div className="space-y-4 overflow-y-auto flex-1 pr-2 pb-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700">
+        <div className="space-y-4 shrink-0 pr-2 mb-4">
           <input
             type="text"
             placeholder="Buscar por nombre o código"
@@ -227,6 +228,8 @@ export function SubjectList() {
               </div>
             )}
           </div>
+        </div>
+        <div className="overflow-y-auto min-h-0 flex-1 pr-2 pb-4 space-y-3.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700">
           {filteredGroups.map((group) => (
             <SubjectItem key={group.code} group={group} />
           ))}
@@ -237,7 +240,7 @@ export function SubjectList() {
 
   // Vista 2: Mostrando paralelos de una materia específica (Search Result)
   return (
-    <div className="flex flex-col h-full  overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
       {renderBreadcrumb()}
       <div className="space-y-4 overflow-y-auto flex-1 pr-2 pb-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-700">
         {groups.map((group, groupIndex) => (
@@ -250,6 +253,9 @@ export function SubjectList() {
 
 function SubjectItem({ group }: { group: SubjectGroup }) {
   const { state, dispatch } = useScheduler()
+  const isSubjectSelected = state.selectedParallels.some(
+    selected => selected.subjectCode.trim().toUpperCase() === group.code.trim().toUpperCase()
+  )
 
   const handleSelectSubject = async () => {
     dispatch({ type: 'SET_SEARCH_QUERY', payload: group.code })
@@ -362,12 +368,16 @@ function SubjectItem({ group }: { group: SubjectGroup }) {
   return (
     <button
       onClick={handleSelectSubject}
-      className="w-full text-left group bg-zinc-900 hover:bg-zinc-800/50 border border-zinc-800 hover:border-blue-900/50 transition-all cursor-pointer py-4 px-5 rounded-2xl flex flex-col gap-1 relative"
+      className={`w-full text-left group bg-zinc-900 hover:bg-zinc-800/50 border transition-all cursor-pointer py-4 px-5 rounded-2xl flex flex-col gap-1 relative ${
+        isSubjectSelected
+          ? 'border-emerald-500/80 hover:border-emerald-400'
+          : 'border-zinc-800 hover:border-blue-900/50'
+      }`}
     >
       <div className="flex justify-between items-start w-full">
-        <span className="text-[10px] font-bold text-zinc-600 group-hover:text-blue-500 transition-colors uppercase tracking-widest leading-none">{group.code}</span>
+        <span className={cn("text-[10px] font-bold text-zinc-600  transition-colors uppercase tracking-widest leading-none", isSubjectSelected ? 'text-emerald-500' : 'group-hover:text-blue-500')}>{group.code}</span>
       </div>
-      <span className="text-sm font-extrabold text-white transition-colors leading-tight">{group.name}</span>
+      <span className={`text-sm font-extrabold transition-colors leading-tight ${isSubjectSelected ? '' : 'text-whtie'}`}>{group.name}</span>
     </button>
   )
 }
