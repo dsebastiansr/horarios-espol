@@ -1,5 +1,5 @@
-import { secondsToTime } from '../../utils/conflicts'
-import { hexToRgba, mixHexColors } from '../../utils/buildings'
+import { secondsToTime } from '../../../../domain/scheduler/conflicts'
+import { hexToRgba, mixHexColors } from '../../../../domain/scheduler/buildings'
 
 interface DayDefinition {
   key: string
@@ -48,19 +48,6 @@ export function LinearScheduleGrid({
   emptyTitle,
   emptySubtitle,
 }: LinearScheduleGridProps) {
-  const getBadgeClassName = (kind: GridBadge['kind']) => {
-    switch (kind) {
-      case 'date':
-        return ''
-      case 'block':
-        return ''
-      case 'room':
-        return ''
-      default:
-        return ''
-    }
-  }
-
   const getBadgeToneStyle = (baseColor: string, kind: GridBadge['kind']) => {
     const byKind = {
       date: 0.32,
@@ -162,7 +149,7 @@ export function LinearScheduleGrid({
                   {item.badges.map((badge, index) => (
                     <span
                       key={`${item.id}-badge-${index}`}
-                      className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium border ${getBadgeClassName(badge.kind)}`}
+                      className="text-[9px] px-1.5 py-0.5 rounded-full font-medium border"
                       style={getBadgeToneStyle(item.color, badge.kind)}
                     >
                       {badge.label}

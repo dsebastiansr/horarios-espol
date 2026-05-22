@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react'
-import type { SchedulerState, SchedulerAction, SelectedParallel } from '../types'
+import type { SchedulerState, SchedulerAction, SelectedParallel } from '../../../domain/scheduler/types'
 
 // --- Initial State ---
 const initialState: SchedulerState = {
@@ -19,6 +19,19 @@ const initialState: SchedulerState = {
 // --- Reducer ---
 function schedulerReducer(state: SchedulerState, action: SchedulerAction): SchedulerState {
   switch (action.type) {
+    case 'RESET_FOR_NEW_STUDENT':
+      return {
+        ...state,
+        selectedParallels: [],
+        searchResults: [],
+        availableSubjects: [],
+        parallelDetails: {},
+        searchQuery: '',
+        searchMode: 'search',
+        errorSearch: null,
+        studentInfo: null,
+        stoppedSubjects: {},
+      }
     case 'SET_SEARCH_RESULTS':
       const filtered = action.payload.filter(r => {
         const stoppedArr = state.stoppedSubjects[r.codigomateria] || []
@@ -67,11 +80,9 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
       return { ...state, selectedParallels: [...state.selectedParallels, action.payload] }
     }
     case 'REMOVE_PARALLEL': {
-      const pToRemove = state.selectedParallels.find(p => p.id === action.payload)
-      if (!pToRemove) return state
       return {
         ...state,
-        selectedParallels: state.selectedParallels.filter(p => p.subjectCode !== pToRemove.subjectCode),
+        selectedParallels: state.selectedParallels.filter(p => p.id !== action.payload),
       }
     }
     case 'CLEAR_ALL':

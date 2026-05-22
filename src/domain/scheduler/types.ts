@@ -13,7 +13,7 @@ export interface AvailableSubject {
   cod_materia_acad: string
   nombre_materia: string
   numcreditos: number
-  tipocredito: string
+  tipocredito: string;        // EDUCACIÓN GENERAL, FORMACIÓN COMPLEMENTARIA, FORMACIÓN PROFESIONAL
   estadoacad: string
   cod_unidadestudiante: string
 }
@@ -62,6 +62,7 @@ export interface ParallelDetail {
   exams: ExamSlot[]
   loading: boolean
   error: string | null
+  cuposDisponibles: number | null
 }
 
 export interface SelectedParallel {
@@ -118,6 +119,7 @@ export interface StudentInfo {
 
 // --- Reducer Actions ---
 export type SchedulerAction =
+  | { type: 'RESET_FOR_NEW_STUDENT' }
   | { type: 'SET_SEARCH_RESULTS'; payload: SubjectResult[] }
   | { type: 'SET_AVAILABLE_SUBJECTS'; payload: AvailableSubject[] }
   | { type: 'SET_SEARCH_QUERY'; payload: string }

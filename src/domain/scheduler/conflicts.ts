@@ -1,4 +1,4 @@
-import type { ScheduleSlot, ExamSlot, SelectedParallel } from '../types'
+import type { ScheduleSlot, ExamSlot, SelectedParallel } from './types'
 
 /**
  * Converts seconds-from-midnight to "HH:MM" string
@@ -96,20 +96,20 @@ export function hasExamConflict(
 
 /** Palette of colors for subjects */
 export const SUBJECT_COLORS = [
-  '#0d9488', // teal-600
-  '#0284c7', // sky-600
-  '#4f46e5', // indigo-600
-  '#be123c', // rose-700
-  '#b45309', // amber-700
-  '#15803d', // green-700
-  '#7c3aed', // violet-600
-  '#0891b2', // cyan-600
-  '#c026d3', // fuchsia-600
-  '#e11d48', // rose-600
+  '#23252b',
 ]
 
-export function getSubjectColor(index: number): string {
-  return SUBJECT_COLORS[index % SUBJECT_COLORS.length]
+export function getSubjectColor(seed: number | string): string {
+  if (typeof seed === 'number') {
+    return SUBJECT_COLORS[Math.abs(seed) % SUBJECT_COLORS.length]
+  }
+
+  const normalized = seed.trim().toUpperCase()
+  let hash = 0
+  for (let i = 0; i < normalized.length; i += 1) {
+    hash = (hash * 31 + normalized.charCodeAt(i)) >>> 0
+  }
+  return SUBJECT_COLORS[hash % SUBJECT_COLORS.length]
 }
 
 /** Map day names to column indexes (Mon=0 ... Sat=5) */

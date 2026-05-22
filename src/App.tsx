@@ -1,6 +1,6 @@
-import { SchedulerProvider, useScheduler } from './context/SchedulerContext'
-import { SearchPanel } from './components/SearchPanel/SearchPanel'
-import { SchedulePanel } from './components/SchedulePanel/SchedulePanel'
+import { SchedulerProvider, useScheduler } from './features/schedule/context/SchedulerContext'
+import { SearchPanel } from './features/schedule/components/SearchPanel/SearchPanel'
+import { SchedulePanel } from './features/schedule/components/SchedulePanel/SchedulePanel'
 
 function AppContent() {
   useScheduler()

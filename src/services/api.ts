@@ -1,4 +1,4 @@
-import { parseISO8601Duration } from '../utils/conflicts'
+import { parseISO8601Duration } from '../domain/scheduler/conflicts'
 import type {
   SubjectResult,
   AvailableSubject,
@@ -6,7 +6,7 @@ import type {
   ExamSlot,
   CourseInfo,
   StudentInfo
-} from '../types'
+} from '../domain/scheduler/types'
 
 async function get<T>(path: string, params: Record<string, string>): Promise<T> {
   const searchParams = new URLSearchParams(params)

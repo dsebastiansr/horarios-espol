@@ -45,8 +45,8 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
     // Si ya se está cargando (y no es un reintento forzado), NO hacer nada
     if (existing?.loading && !force) return
 
-    // Si ya tiene datos (info o horario) y cupos disponibles, y no es forzado, NO hacer nada
-    if (!force && existing && (existing.info || existing.schedule.length > 0) && existing.cuposDisponibles !== null) return
+    // Si ya tiene datos (info o horario) y no es forzado, NO hacer nada
+    if (!force && existing && (existing.info || existing.schedule.length > 0)) return
 
     const initial: ParallelDetail = {
       subjectCode: parallel.codigomateria,
@@ -59,29 +59,22 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
       exams: existing?.exams || [],
       loading: true,
       error: null,
-      cuposDisponibles: existing?.cuposDisponibles ?? null,
     }
 
     dispatch({ type: 'SET_PARALLEL_DETAIL', payload: { key, detail: initial } })
 
     try {
-      const [infoRes, scheduleRes, examsRes, studentsRes] = await Promise.allSettled([
+      const [infoRes, scheduleRes, examsRes] = await Promise.allSettled([
         api.getCourseInfo(parallel.codigomateria, parallel.paralelo),
         api.getSubjectSchedule(parallel.codigomateria, parallel.paralelo),
-        parallel.tipoparalelo === 'TEORICO'
+        parallel.tipoparalelo === 'TEORICO' 
           ? api.getExamSchedule(parallel.codigomateria, parallel.paralelo)
-          : Promise.resolve([]),
-        api.getRegisteredStudents(parallel.codigomateria, parallel.paralelo),
+          : Promise.resolve([])
       ])
 
       const info = infoRes.status === 'fulfilled' ? (infoRes.value[0] as CourseInfo) ?? null : (existing?.info || null)
       const scheduleData = scheduleRes.status === 'fulfilled' ? scheduleRes.value : (existing?.schedule || [])
       const examsData = examsRes.status === 'fulfilled' ? examsRes.value : (existing?.exams || [])
-      const students = studentsRes.status === 'fulfilled' ? studentsRes.value : null
-
-      const cuposDisponibles = (info && students)
-        ? Math.max(0, info.cupo_maximo - students.length)
-        : null
 
       // Detect if this parallel is inactive (404)
       const isInactive = [infoRes, scheduleRes].some(
@@ -97,7 +90,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
         type: 'SET_PARALLEL_DETAIL',
         payload: {
           key,
-          detail: { ...initial, info, schedule: scheduleData, exams: examsData, cuposDisponibles, loading: false },
+          detail: { ...initial, info, schedule: scheduleData, exams: examsData, loading: false },
         },
       })
     } catch (e) {
@@ -150,71 +143,13 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
     setExpanded(prev => !prev)
   }
 
-  const [showOptions, setShowOptions] = useState(false)
-
-  const getPracticoStatus = (pr: SubjectResult) => {
-    const prKey = `${pr.codigomateria}-${pr.paralelo}-${pr.tipocurso}`
-    const isPrSelected = state.selectedParallels.some(sel => sel.id === prKey)
-
-    if (isPrSelected) return { type: 'agregado', label: 'AGREGADO' }
-
-    const prDetail = state.parallelDetails[prKey]
-    if (prDetail && !prDetail.loading && prDetail.schedule.length > 0) {
-      const combined = [...(tDetail?.schedule ?? []), ...prDetail.schedule]
-      // Check conflict against everything EXCEPT this subject's parallels
-      const otherSelected = state.selectedParallels.filter(sel => sel.subjectCode !== pr.codigomateria)
-      if (hasTimeConflict(combined, otherSelected)) {
-        return { type: 'cruce', label: 'CRUCE' }
-      }
-    }
-    return null
-  }
-
   const handlePracticoChange = (id: string) => {
-    const oldPKey = pKey
     setSelectedPracticoId(id)
-
     const newP = unit.practicos.find(pr => `${pr.codigomateria}-${pr.paralelo}-${pr.tipocurso}` === id)
     if (newP && expanded) {
       loadParallelInfo(newP)
     }
-    setShowOptions(false)
-
-    // If the current practical is already in the schedule, swap it with the new one
-    if (oldPKey && state.selectedParallels.some(sel => sel.id === oldPKey)) {
-      dispatch({ type: 'REMOVE_PARALLEL', payload: oldPKey })
-
-      const newPKey = id
-      const newPDetail = state.parallelDetails[newPKey]
-      // Only add if we have the info ready (usually prefetched)
-      if (newPDetail && !newPDetail.loading && newPDetail.info) {
-        const color = getSubjectColor(newPDetail.subjectCode)
-        dispatch({
-          type: 'ADD_PARALLEL',
-          payload: {
-            id: newPKey,
-            subjectCode: newPDetail.subjectCode,
-            subjectName: newPDetail.subjectName,
-            paralelo: newPDetail.paralelo,
-            tipocurso: newPDetail.tipocurso,
-            tipoparalelo: newPDetail.tipoparalelo,
-            info: newPDetail.info,
-            schedule: newPDetail.schedule,
-            exams: newPDetail.exams,
-            color,
-          },
-        })
-      }
-    }
   }
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    if (!showOptions) return
-    const handler = () => setShowOptions(false)
-    window.addEventListener('click', handler)
-    return () => window.removeEventListener('click', handler)
-  }, [showOptions])
 
   const combinedSchedule = [...(tDetail?.schedule ?? []), ...(pDetail?.schedule ?? [])]
   const combinedExams = [...(tDetail?.exams ?? []), ...(pDetail?.exams ?? [])]
@@ -233,7 +168,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
 
   const handleAdd = () => {
     if (!isReady || isSelected || hasConflict) return
-    const color = getSubjectColor(subjectCode ?? subjectIndex)
+    const color = getSubjectColor(subjectIndex)
 
     if (t && tDetail?.info) {
       dispatch({
@@ -294,16 +229,6 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
         </div>
         <span className="text-sm font-bold text-zinc-100 truncate">{title}</span>
 
-        {loading && (tDetail?.cuposDisponibles === null && pDetail?.cuposDisponibles === null) && (
-          <span className="text-[10px] text-zinc-400 animate-pulse font-medium">Cupos...</span>
-        )}
-
-        {!loading && (tDetail?.cuposDisponibles !== null || pDetail?.cuposDisponibles !== null) && (
-          <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/20">
-            {tDetail?.cuposDisponibles ?? pDetail?.cuposDisponibles} cupos
-          </span>
-        )}
-
         {loading && <span className="text-[10px] text-zinc-400 ml-2 animate-pulse font-medium italic">Cargando...</span>}
 
         <div className="ml-auto flex items-center gap-2">
@@ -322,76 +247,42 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
       </button>
 
       {expanded && (
-        <div className="px-4 pb-4 text-xs text-zinc-500 space-y-6 border-t border-zinc-800 pt-4">
+        <div className="px-4 pb-4 text-xs text-zinc-500 space-y-4 border-t border-zinc-800 pt-4">
           {loading && <p className="italic text-zinc-400">Cargando información detallada...</p>}
 
           {!loading && (
             <>
               {/* Selector de práctico si hay múltiples asociados */}
-              {/* {unit.practicos.length > 1 && (
-                <div className="flex items-center gap-2 bg-zinc-800/50 p-2.5 rounded-xl border border-zinc-800 relative">
-                  <span className="font-bold text-zinc-500 text-[10px] uppercase tracking-wider shrink-0">Cambiar Práctico:</span>
-                  <div className="relative flex-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowOptions(!showOptions)
-                      }}
-                      className="w-full flex items-center justify-between bg-zinc-900 border border-zinc-700 hover:border-zinc-600 rounded-lg px-3 py-1.5 text-zinc-100 font-medium transition-all text-[11px] group"
-                    >
-                      <span className="truncate">Paralelo {p.paralelo}</span>
-                      <span className={`text-[10px] text-zinc-500 group-hover:text-zinc-300 transition-transform duration-200 ${showOptions ? 'rotate-180' : ''}`}>▼</span>
-                    </button>
-
-                    {showOptions && (
-                      <div
-                        className="absolute bottom-full left-0 right-0 mb-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <div className="max-h-48 overflow-y-auto py-1 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
-                          {unit.practicos.map(pr => {
-                            const prId = `${pr.codigomateria}-${pr.paralelo}-${pr.tipocurso}`
-                            const status = getPracticoStatus(pr)
-                            const isCurrent = prId === selectedPracticoId
-
-                            return (
-                              <button
-                                key={prId}
-                                onClick={() => handlePracticoChange(prId)}
-                                className={`w-full flex items-center justify-between px-3 py-2 text-left hover:bg-zinc-800 transition-colors ${isCurrent ? 'bg-blue-500/5 text-blue-400' : 'text-zinc-300'}`}
-                              >
-                                <span className={`text-[11px] font-bold ${isCurrent ? 'text-blue-400' : ''}`}>
-                                  Paralelo {pr.paralelo}
-                                </span>
-                                {status && (
-                                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter ${status.type === 'agregado' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                                    }`}>
-                                    {status.label}
-                                  </span>
-                                )}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+              {unit.practicos.length > 1 && (
+                <div className="flex items-center gap-2 bg-zinc-800/50 p-2.5 rounded-xl border border-zinc-800">
+                  <span className="font-bold text-zinc-500 text-[10px] uppercase tracking-wider">Cambiar Práctico:</span>
+                  <select
+                    value={selectedPracticoId ?? ''}
+                    onChange={e => handlePracticoChange(e.target.value)}
+                    className="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 outline-none text-zinc-100 font-medium focus:ring-2 focus:ring-blue-500/20 transition-all text-[11px]"
+                  >
+                    {unit.practicos.map(pr => (
+                      <option key={`${pr.codigomateria}-${pr.paralelo}-${pr.tipocurso}`} value={`${pr.codigomateria}-${pr.paralelo}-${pr.tipocurso}`}>
+                        Paralelo {pr.paralelo}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )} */}
+              )}
 
               {/* Detalle Teórico */}
               {t && tDetail && !tDetail.error && (
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between border-zinc-800">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                     <span className="text-blue-400 font-bold tracking-tight">Teórico</span>
-                    <span className="text-zinc-500 font-medium text-xs">{tDetail.info?.nombre_profesor || 'Sin profesor'}</span>
+                    <span className="text-zinc-500 font-medium text-[12px]">{tDetail.info?.nombre_profesor || 'Sin profesor'}</span>
                   </div>
                   <div className="space-y-1.5 pt-1">
                     {tDetail.schedule.length > 0 ? (
                       tDetail.schedule.map((s, i) => (
                         <div key={i} className="flex items-start gap-3 justify-between bg-zinc-800/30 p-2 rounded-lg border border-zinc-700/50">
-                          <span className="text-xs font-extrabold text-blue-400 w-8">{s.nombredia.slice(0, 3)}</span>
-                          <span className="text-zinc-300 font-mono tracking-tight text-xs">
+                          <span className="text-[12px] font-extrabold text-blue-400 w-8">{s.nombredia.slice(0, 3)}</span>
+                          <span className="text-zinc-300 font-mono tracking-tight text-[12px]">
                             {secondsToTime(s.horainicio)} — {secondsToTime(s.horafin)}
                           </span>
                           <span className="text-zinc-500 text-right flex-1 font-medium">{s.aula}</span>
@@ -406,17 +297,17 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
 
               {/* Detalle Práctico */}
               {p && pDetail && !pDetail.error && (
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between border-zinc-800">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                     <span className="text-emerald-400 font-bold tracking-tight">Práctico</span>
-                    <span className="text-zinc-500 font-medium text-xs">{pDetail.info?.nombre_profesor || 'Sin profesor'}</span>
+                    <span className="text-zinc-500 font-medium text-[12px]">{pDetail.info?.nombre_profesor || 'Sin profesor'}</span>
                   </div>
                   <div className="space-y-1.5 pt-1">
                     {pDetail.schedule.length > 0 ? (
                       pDetail.schedule.map((s, i) => (
                         <div key={i} className="flex items-start gap-3 justify-between bg-zinc-800/30 p-2 rounded-lg border border-zinc-700/50">
-                          <span className="text-xs font-extrabold text-emerald-400 w-8">{s.nombredia.slice(0, 3)}</span>
-                          <span className="text-zinc-300 font-mono tracking-tight text-xs">
+                          <span className="text-[12px] font-extrabold text-emerald-400 w-8">{s.nombredia.slice(0, 3)}</span>
+                          <span className="text-zinc-300 font-mono tracking-tight text-[12px]">
                             {secondsToTime(s.horainicio)} — {secondsToTime(s.horafin)}
                           </span>
                           <span className="text-zinc-500 text-right flex-1 font-medium">{s.aula}</span>
@@ -435,7 +326,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
               )}
 
               {/* Exámenes Combinados */}
-              {/* {combinedExams.length > 0 && (
+              {combinedExams.length > 0 && (
                 <div className="pt-3 border-t border-zinc-800">
                   <p className="text-white font-bold mb-2 tracking-tight">Fechas de Exámenes</p>
                   <div className="space-y-1.5">
@@ -448,9 +339,9 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
                       }
                       return (
                         <div key={i} className="flex items-center gap-4 justify-between bg-indigo-500/10 p-2 rounded-lg border-l-2 border-indigo-500">
-                          <span className="text-xs font-bold text-indigo-400 w-fit uppercase">{dateStr}</span>
+                          <span className="text-[12px] font-bold text-indigo-400 w-fit uppercase">{dateStr}</span>
                           {e.horainicio !== undefined && e.horafin !== undefined && (
-                            <span className="text-zinc-300 font-mono text-xs">
+                            <span className="text-zinc-300 font-mono text-[12px]">
                               {secondsToTime(e.horainicio as number)} — {secondsToTime(e.horafin as number)}
                             </span>
                           )}
@@ -460,7 +351,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
                     })}
                   </div>
                 </div>
-              )} */}
+              )}
 
               {/* Conflictos */}
               {isSubjectAlreadySelected && (
@@ -495,7 +386,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
                 ) : (
                   <button
                     onClick={handleRemove}
-                    className="px-6 py-3 bg-red-900 hover:bg-zinc-700 text-red-300 rounded-xl font-bold w-full transition-all border border-red-500/80 active:scale-[0.98] text-sm"
+                    className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-red-500 rounded-xl font-bold w-full transition-all border border-red-500/20 active:scale-[0.98]"
                   >
                     Quitar del horario
                   </button>
