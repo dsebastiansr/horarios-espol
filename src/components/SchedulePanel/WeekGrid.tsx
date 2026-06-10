@@ -84,7 +84,7 @@ export function WeekGrid() {
       badges: [
         b.bloque ? { label: b.bloque, kind: 'block' as const } : null,
         b.aula ? { label: b.aula, kind: 'room' as const } : null,
-      ].filter(Boolean),
+      ].filter((badge): badge is { label: string; kind: 'block' | 'room' } => badge !== null),
       rightTag: `P${b.parallel.paralelo}`,
       rightTagClassName: isPractico
         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'

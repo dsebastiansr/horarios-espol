@@ -128,7 +128,7 @@ export function SubjectList() {
         units: groupSubjectParallels(group.parallels),
       }
     })
-  }, [state.searchResults, availableSubjectsForTab, state.searchMode])
+  }, [state.searchResults, availableSubjectsForTab, state.searchMode, state.searchQuery])
 
   const filteredGroups = useMemo(() => {
     if (!filterText.trim()) return groups

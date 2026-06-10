@@ -28,7 +28,7 @@ export const api = {
     }),
 
   getSubjectSchedule: async (subjectCode: string, paralelo: number) => {
-    const data = await get<any[]>('/api/subject-schedule', {
+    const data = await get<Record<string, unknown>[]>('/api/subject-schedule', {
       subject_code: subjectCode,
       course: String(paralelo),
     })
@@ -40,7 +40,7 @@ export const api = {
   },
 
   getExamSchedule: async (subjectCode: string, paralelo: number) => {
-    const data = await get<any[]>('/api/exam-schedule', {
+    const data = await get<Record<string, unknown>[]>('/api/exam-schedule', {
       subject_code: subjectCode,
       course: String(paralelo),
     })
@@ -63,7 +63,7 @@ export const api = {
     }),
 
   getRegisteredStudents: (subjectCode: string, paralelo: number) =>
-    get<any[]>('/api/registered-students', {
+    get<Record<string, unknown>[]>('/api/registered-students', {
       subject_code: subjectCode,
       course: String(paralelo),
     }),

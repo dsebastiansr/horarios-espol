@@ -75,7 +75,7 @@ export function ExamGrid() {
       const locationBadges = [
         b.bloque ? { label: b.bloque as string, kind: 'block' as const } : null,
         b.aula ? { label: b.aula as string, kind: 'room' as const } : null,
-      ].filter(Boolean)
+      ].filter((badge): badge is { label: string; kind: 'block' | 'room' } => badge !== null)
 
       return {
         id: `${b.parallel.id}-exam-${i}`,

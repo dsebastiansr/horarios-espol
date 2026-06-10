@@ -133,88 +133,25 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
   }, [expanded])
 
   // Smart Default Effect: Si el P actual no tiene horario, busca uno que sí tenga
-  useEffect(() => {
-    if (pDetail && !pDetail.loading && pDetail.schedule.length === 0) {
-      const betterP = unit.practicos.find(pr => {
-        const key = `${pr.codigomateria}-${pr.paralelo}-${pr.tipocurso}`
-        const pDef = state.parallelDetails[key]
-        return pDef && !pDef.loading && pDef.schedule.length > 0
-      })
-      if (betterP) {
-        setSelectedPracticoId(`${betterP.codigomateria}-${betterP.paralelo}-${betterP.tipocurso}`)
+  if (pDetail && !pDetail.loading && pDetail.schedule.length === 0) {
+    const betterP = unit.practicos.find(pr => {
+      const key = `${pr.codigomateria}-${pr.paralelo}-${pr.tipocurso}`
+      const pDef = state.parallelDetails[key]
+      return pDef && !pDef.loading && pDef.schedule.length > 0
+    })
+    if (betterP) {
+      const newId = `${betterP.codigomateria}-${betterP.paralelo}-${betterP.tipocurso}`
+      if (selectedPracticoId !== newId) {
+        setSelectedPracticoId(newId)
       }
     }
-  }, [pDetail?.loading, unit.practicos])
+  }
 
   const handleExpand = () => {
     setExpanded(prev => !prev)
   }
 
-  const [showOptions, setShowOptions] = useState(false)
 
-  const getPracticoStatus = (pr: SubjectResult) => {
-    const prKey = `${pr.codigomateria}-${pr.paralelo}-${pr.tipocurso}`
-    const isPrSelected = state.selectedParallels.some(sel => sel.id === prKey)
-
-    if (isPrSelected) return { type: 'agregado', label: 'AGREGADO' }
-
-    const prDetail = state.parallelDetails[prKey]
-    if (prDetail && !prDetail.loading && prDetail.schedule.length > 0) {
-      const combined = [...(tDetail?.schedule ?? []), ...prDetail.schedule]
-      // Check conflict against everything EXCEPT this subject's parallels
-      const otherSelected = state.selectedParallels.filter(sel => sel.subjectCode !== pr.codigomateria)
-      if (hasTimeConflict(combined, otherSelected)) {
-        return { type: 'cruce', label: 'CRUCE' }
-      }
-    }
-    return null
-  }
-
-  const handlePracticoChange = (id: string) => {
-    const oldPKey = pKey
-    setSelectedPracticoId(id)
-
-    const newP = unit.practicos.find(pr => `${pr.codigomateria}-${pr.paralelo}-${pr.tipocurso}` === id)
-    if (newP && expanded) {
-      loadParallelInfo(newP)
-    }
-    setShowOptions(false)
-
-    // If the current practical is already in the schedule, swap it with the new one
-    if (oldPKey && state.selectedParallels.some(sel => sel.id === oldPKey)) {
-      dispatch({ type: 'REMOVE_PARALLEL', payload: oldPKey })
-
-      const newPKey = id
-      const newPDetail = state.parallelDetails[newPKey]
-      // Only add if we have the info ready (usually prefetched)
-      if (newPDetail && !newPDetail.loading && newPDetail.info) {
-        const color = getSubjectColor(newPDetail.subjectCode)
-        dispatch({
-          type: 'ADD_PARALLEL',
-          payload: {
-            id: newPKey,
-            subjectCode: newPDetail.subjectCode,
-            subjectName: newPDetail.subjectName,
-            paralelo: newPDetail.paralelo,
-            tipocurso: newPDetail.tipocurso,
-            tipoparalelo: newPDetail.tipoparalelo,
-            info: newPDetail.info,
-            schedule: newPDetail.schedule,
-            exams: newPDetail.exams,
-            color,
-          },
-        })
-      }
-    }
-  }
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    if (!showOptions) return
-    const handler = () => setShowOptions(false)
-    window.addEventListener('click', handler)
-    return () => window.removeEventListener('click', handler)
-  }, [showOptions])
 
   const combinedSchedule = [...(tDetail?.schedule ?? []), ...(pDetail?.schedule ?? [])]
   const combinedExams = [...(tDetail?.exams ?? []), ...(pDetail?.exams ?? [])]

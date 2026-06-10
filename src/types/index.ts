@@ -38,6 +38,7 @@ export interface ExamSlot {
   fecha?: string
   nombredia?: string
   aula?: string
+  bloque?: string
   [key: string]: unknown // API schema not fully documented
 }
 

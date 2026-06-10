@@ -32,12 +32,13 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
         studentInfo: null,
         stoppedSubjects: {},
       }
-    case 'SET_SEARCH_RESULTS':
+    case 'SET_SEARCH_RESULTS': {
       const filtered = action.payload.filter(r => {
         const stoppedArr = state.stoppedSubjects[r.codigomateria] || []
         return !stoppedArr.includes(r.paralelo)
       })
       return { ...state, searchResults: filtered }
+    }
     case 'SET_AVAILABLE_SUBJECTS':
       return { ...state, availableSubjects: action.payload }
     case 'SET_SEARCH_QUERY':
@@ -60,7 +61,7 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
       }
     case 'SET_STUDENT_INFO':
       return { ...state, studentInfo: action.payload }
-    case 'SET_STOPPED_SUBJECT':
+    case 'SET_STOPPED_SUBJECT': {
       const { code, paralelo: stopP } = action.payload
       return {
         ...state,
@@ -74,6 +75,7 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
           return !stoppedArr.includes(r.paralelo) && stopP !== r.paralelo
         })
       }
+    }
     case 'ADD_PARALLEL': {
       const exists = state.selectedParallels.some(p => p.id === action.payload.id)
       if (exists) return state
@@ -111,6 +113,7 @@ export function SchedulerProvider({ children }: { children: ReactNode }) {
 }
 
 // --- Hook ---
+// eslint-disable-next-line react-refresh/only-export-components
 export function useScheduler() {
   const ctx = useContext(SchedulerContext)
   if (!ctx) throw new Error('useScheduler must be used within SchedulerProvider')
@@ -118,6 +121,7 @@ export function useScheduler() {
 }
 
 // --- Selector helpers ---
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSelectedParallels(): SelectedParallel[] {
   return useScheduler().state.selectedParallels
 }
