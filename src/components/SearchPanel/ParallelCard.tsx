@@ -265,7 +265,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
           {!loading && (
             <>
               {/* Selector de práctico si hay múltiples asociados */}
-              {/* {unit.practicos.length > 1 && (
+              {unit.practicos.length > 1 && (
                 <div className="flex items-center gap-2 bg-zinc-800/50 p-2.5 rounded-xl border border-zinc-800 relative">
                   <span className="font-bold text-zinc-500 text-[10px] uppercase tracking-wider shrink-0">Cambiar Práctico:</span>
                   <div className="relative flex-1">
@@ -274,7 +274,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
                         e.stopPropagation()
                         setShowOptions(!showOptions)
                       }}
-                      className="w-full flex items-center justify-between bg-zinc-900 border border-zinc-700 hover:border-zinc-600 rounded-lg px-3 py-1.5 text-zinc-100 font-medium transition-all text-[11px] group"
+                      className="w-full flex items-center justify-between bg-zinc-900 border border-zinc-700 hover:border-zinc-600 rounded-lg px-3 py-1.5 text-zinc-100 font-medium transition-all text-[11px] group cursor-pointer"
                     >
                       <span className="truncate">Paralelo {p.paralelo}</span>
                       <span className={`text-[10px] text-zinc-500 group-hover:text-zinc-300 transition-transform duration-200 ${showOptions ? 'rotate-180' : ''}`}>▼</span>
@@ -295,7 +295,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
                               <button
                                 key={prId}
                                 onClick={() => handlePracticoChange(prId)}
-                                className={`w-full flex items-center justify-between px-3 py-2 text-left hover:bg-zinc-800 transition-colors ${isCurrent ? 'bg-blue-500/5 text-blue-400' : 'text-zinc-300'}`}
+                                className={`w-full flex items-center justify-between px-3 py-2 text-left hover:bg-zinc-800 transition-colors cursor-pointer ${isCurrent ? 'bg-blue-500/5 text-blue-400' : 'text-zinc-300'}`}
                               >
                                 <span className={`text-[11px] font-bold ${isCurrent ? 'text-blue-400' : ''}`}>
                                   Paralelo {pr.paralelo}
@@ -314,7 +314,7 @@ export function ParallelCard({ unit, subjectIndex }: Props) {
                     )}
                   </div>
                 </div>
-              )} */}
+              )}
 
               {/* Detalle Teórico */}
               {t && tDetail && !tDetail.error && (

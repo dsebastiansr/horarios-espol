@@ -24,24 +24,39 @@ function groupSubjectParallels(parallels: SubjectResult[]): ParallelUnit[] {
   const units: ParallelUnit[] = []
   const usedPracticos = new Set<string>()
 
+  // Detect if all practicals share the same hundreds digit (e.g., all are 101, 102)
+  const allSameHundreds = practicos.length > 0 && new Set(practicos.map(p => Math.floor(p.paralelo / 100))).size === 1
+
   for (const t of teoricos) {
-    // Sort all practicals so those matching the theoretical parallel come first
-    const associatedPracticos = [...practicos].sort((a, b) => {
-      const matchA = a.paralelo % 100 === t.paralelo
-      const matchB = b.paralelo % 100 === t.paralelo
-      if (matchA && !matchB) return -1
-      if (!matchA && matchB) return 1
-      return a.paralelo - b.paralelo
+    // Only include practicals that strictly match this theoretical parallel
+    const associatedPracticos = practicos.filter(p => {
+      if (p.paralelo === t.paralelo) return true
+
+      if (allSameHundreds && teoricos.length > 1) {
+        return p.paralelo % 100 === t.paralelo
+      }
+
+      return Math.floor(p.paralelo / 100) === t.paralelo
     })
 
+    // Sort them by parallel number
+    associatedPracticos.sort((a, b) => a.paralelo - b.paralelo)
+
     // Mark matched practicals as used so they don't appear as orphans
-    practicos
-      .filter(p => p.paralelo % 100 === t.paralelo)
-      .forEach(p => usedPracticos.add(`${p.codigomateria}-${p.paralelo}`))
+    associatedPracticos.forEach(p => usedPracticos.add(`${p.codigomateria}-${p.paralelo}`))
 
     units.push({
       teorico: t,
       practicos: associatedPracticos,
+    })
+  }
+
+  // Handle orphan practicals (practicals without a matching theoretical parallel)
+  const orphans = practicos.filter(p => !usedPracticos.has(`${p.codigomateria}-${p.paralelo}`))
+  for (const o of orphans) {
+    units.push({
+      teorico: null,
+      practicos: [o]
     })
   }
 
